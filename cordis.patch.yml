@@ -1,0 +1,18 @@
+# Muretai as a dsh BUNDLE plugin (`dsh plugin --profile <p> add
+# github:muretai/muretai-dsh-skill`). This static patch wires ONLY the MCP row; the
+# full experience (node install + skill + inbound-mail wake) is ./install.sh.
+# Nothing machine-specific is baked in: the launcher below resolves the node
+# directory and the minted NAME/RELAY at runtime from the node's own node.env.
+# The row shares id `muretai` with the install.sh path on purpose — dsh config
+# layers are last-write-wins per row id, so the two paths never double-register.
+- insert:
+    - id: muretai
+      name: '@deepseek-ai/dsh-mcp-client'
+      config:
+        transport: stdio
+        serverName: muretai
+        command: bash
+        args:
+          - -lc
+          - >-
+            cd "${MURETAI_HOME:-${AGENTNET_DIR:-$HOME/muretai-node}}" || { echo "muretai node not installed - see github.com/muretai/muretai-dsh-skill" >&2; exit 1; }; [ -f node.env ] && . ./node.env; exec ./.venv/bin/python agent_mcp.py --as "${NAME:-dsh-agent}" ${RELAY:+--relay "$RELAY"}

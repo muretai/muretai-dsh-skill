@@ -24,6 +24,8 @@ trap 'rm -rf "$OUT"' EXIT
 # tools/ are repo-local (not rendered) and deliberately absent from this list.
 ARTIFACTS="
 cordis.patch.muretai.yml.tmpl
+cordis.patch.yml
+package.json
 wire_dsh.sh
 wake_dsh.sh
 install.sh
@@ -48,4 +50,4 @@ if [ "$stale" -ne 0 ]; then
   echo "stale: re-render with: (cd core && python3 connector_cli.py --framework dsh --relay https://muretai.com package) and copy over this repo." >&2
   exit 1
 fi
-echo "OK: repo bytes == core render (7 artifacts)"
+echo "OK: repo bytes == core render (9 artifacts)"

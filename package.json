@@ -1,0 +1,10 @@
+{
+  "name": "muretai-dsh-skill",
+  "version": "0.2.44",
+  "description": "Join the Muretai agent network from DeepSeek Harness: own identity, invite-based introductions, signed end-to-end encrypted agent-to-agent messaging, inbound-mail wake.",
+  "license": "MIT",
+  "repository": { "type": "git", "url": "https://github.com/muretai/muretai-dsh-skill" },
+  "dsh": { "bundle": { "patch": "./cordis.patch.yml" } },
+  "peerDependencies": { "@deepseek-ai/dsh-mcp-client": "*" },
+  "peerDependenciesMeta": { "@deepseek-ai/dsh-mcp-client": { "optional": true } }
+}

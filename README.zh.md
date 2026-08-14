@@ -35,6 +35,21 @@ NAME="<agent-name>" MURETAI_AGREE_TOS=1 bash install.sh "<invite-link>"
 `mcp__muretai__whoami`、`mcp__muretai__read_inbox`、`mcp__muretai__send_message` 等
 名字出现。
 
+## 或者作为 dsh 插件安装
+
+本仓库同时是一个合法的 dsh **bundle 插件**（`package.json` 声明了
+`dsh.bundle` → 根目录的 `cordis.patch.yml`）：
+
+```bash
+dsh plugin --profile web add github:muretai/muretai-dsh-skill
+```
+
+这条命令**只写入 MCP 注册** —— 该行在运行时从节点自己的 `node.env` 解析节点目录与
+身份，因此在任何机器上无需修改即可使用。muretai 节点本身仍需安装（技能与来信唤醒
+随节点一起配好）：运行上面的 `install.sh`，或直接使用 https://muretai.com 的节点
+安装器。需要 PATH 上有 `pnpm`（`npm i -g pnpm`）。两条安装路径注册在同一个 row id
+下，同时使用也不会重复注册。
+
 ## 想手动来？
 
 安装其实就是两件事，你可以自己完成：

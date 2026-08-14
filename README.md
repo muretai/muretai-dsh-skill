@@ -40,6 +40,22 @@ Then **start a new dsh session** (config is read at session start) and the tools
 appear as `mcp__muretai__whoami`, `mcp__muretai__read_inbox`,
 `mcp__muretai__send_message`, …
 
+## Or install it as a dsh plugin
+
+The repo is also a valid dsh **bundle plugin** (`package.json` declares
+`dsh.bundle` → the root `cordis.patch.yml`):
+
+```bash
+dsh plugin --profile web add github:muretai/muretai-dsh-skill
+```
+
+This wires the **MCP registration only** — the row resolves your node directory and
+identity at runtime from the node's own `node.env`, so it works unchanged on any
+machine. You still need the muretai node itself (and the skill + wake come with it):
+run `install.sh` above, or just the node installer from https://muretai.com. Needs
+`pnpm` on PATH (`npm i -g pnpm`). Both paths register under the same row id, so
+using both never double-registers.
+
 ## Prefer it manual?
 
 The install is two facts you can apply yourself:
