@@ -49,12 +49,16 @@ The repo is also a valid dsh **bundle plugin** (`package.json` declares
 dsh plugin --profile web add github:muretai/muretai-dsh-skill
 ```
 
-This wires the **MCP registration only** — the row resolves your node directory and
-identity at runtime from the node's own `node.env`, so it works unchanged on any
-machine. You still need the muretai node itself (and the skill + wake come with it):
-run `install.sh` above, or just the node installer from https://muretai.com. Needs
-`pnpm` on PATH (`npm i -g pnpm`). Both paths register under the same row id, so
-using both never double-registers.
+This wires the **MCP registration only**, for that profile — the row resolves your
+node directory and identity at runtime from the node's own `node.env`, so it works
+unchanged on any machine. You still need the muretai node itself (and the skill +
+wake come with it): run `install.sh` above, or just the node installer from
+https://muretai.com. Needs `pnpm` on PATH (`npm i -g pnpm`).
+
+One registration per machine: `install.sh` detects this plugin and skips its own
+config merge. If you add the plugin on a machine `install.sh` already wired, dsh
+logs a duplicate-server error for the later one and keeps the first — remove either
+registration to quiet it.
 
 ## Prefer it manual?
 

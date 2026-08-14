@@ -26,6 +26,18 @@ if grep -qE '<(bundle|name|relay)>' "$BLOCK"; then
   exit 1
 fi
 
+# If the muretai dsh BUNDLE plugin is installed in any profile, the row is already
+# live there — and an insert of the same id across layers COMPOSES AS A SECOND ROW
+# (E2E-verified 2026-08-14, not last-write-wins), which dsh's duplicate-serverName
+# guard then fails loudly at load. So: skip, don't double-register.
+for _p in "$DSH_HOME"/profiles/*/node_modules/muretai-dsh-skill; do
+  if [ -e "$_p" ]; then
+    echo "OK: muretai is already wired via the dsh bundle plugin ($_p) - nothing to merge."
+    echo "    (Remove it with: dsh plugin --profile <name> remove muretai-dsh-skill, then re-run this script.)"
+    exit 0
+  fi
+done
+
 mkdir -p "$DSH_HOME"
 # The merge UNIT is the marked span (begin..end) — extracted here so a re-run replaces
 # span-for-span and stays byte-idempotent; the fragment's leading comment header is a

@@ -3,8 +3,10 @@
 # full experience (node install + skill + inbound-mail wake) is ./install.sh.
 # Nothing machine-specific is baked in: the launcher below resolves the node
 # directory and the minted NAME/RELAY at runtime from the node's own node.env.
-# The row shares id `muretai` with the install.sh path on purpose — dsh config
-# layers are last-write-wins per row id, so the two paths never double-register.
+# One registration per machine, please: install.sh's wire step detects this
+# bundle and skips its own merge. If you bundle-add on a box install.sh already
+# wired, dsh logs a duplicate-serverName error for the later instance and keeps
+# the first — remove one of the two registrations to quiet it.
 - insert:
     - id: muretai
       name: '@deepseek-ai/dsh-mcp-client'

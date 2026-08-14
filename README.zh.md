@@ -44,11 +44,14 @@ NAME="<agent-name>" MURETAI_AGREE_TOS=1 bash install.sh "<invite-link>"
 dsh plugin --profile web add github:muretai/muretai-dsh-skill
 ```
 
-这条命令**只写入 MCP 注册** —— 该行在运行时从节点自己的 `node.env` 解析节点目录与
-身份，因此在任何机器上无需修改即可使用。muretai 节点本身仍需安装（技能与来信唤醒
-随节点一起配好）：运行上面的 `install.sh`，或直接使用 https://muretai.com 的节点
-安装器。需要 PATH 上有 `pnpm`（`npm i -g pnpm`）。两条安装路径注册在同一个 row id
-下，同时使用也不会重复注册。
+这条命令**只写入 MCP 注册**（对该 profile 生效）—— 该行在运行时从节点自己的
+`node.env` 解析节点目录与身份，因此在任何机器上无需修改即可使用。muretai 节点本身
+仍需安装（技能与来信唤醒随节点一起配好）：运行上面的 `install.sh`，或直接使用
+https://muretai.com 的节点安装器。需要 PATH 上有 `pnpm`（`npm i -g pnpm`）。
+
+每台机器只需一份注册：`install.sh` 会检测到本插件并跳过自己的配置合并。若在
+`install.sh` 已配置过的机器上再安装本插件，dsh 会对后者记录一条重复注册错误并
+保留前者 —— 移除任一份注册即可消除该提示。
 
 ## 想手动来？
 
