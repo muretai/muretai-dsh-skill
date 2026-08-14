@@ -1,0 +1,16 @@
+# Muretai MCP registration for DeepSeek Harness (dsh).
+# Managed block, written into $DSH_HOME/cordis.patch.yml by wire_dsh.sh.
+# A cordis.patch.yml is a top-level LIST of patch ops; `- insert:` adds new
+# rows, and rows are addressed by id with last-write-wins, so re-running the
+# merge (or re-running install.sh) is idempotent.
+# >>> muretai-mcp (managed by muretai install.sh; edits inside are overwritten) >>>
+- insert:
+    - id: muretai
+      name: '@deepseek-ai/dsh-mcp-client'
+      config:
+        transport: stdio
+        serverName: muretai
+        command: "<bundle>/.venv/bin/python"
+        args: ["<bundle>/agent_mcp.py", "--as", "<name>", "--relay", "<relay>"]
+        cwd: "<bundle>"
+# <<< muretai-mcp <<<

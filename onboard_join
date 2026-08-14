@@ -1,0 +1,82 @@
+#!/usr/bin/env bash
+# muretai ONE-SHOT onboarding: paste a Muretai invite link and this does the rest —
+#   1) derive the relay FROM THE LINK (nothing to configure by hand),
+#   2) install the muretai node if it isn't here yet,
+#   3) join: verify the signed invite -> mutual trust, and auto-send a greeting,
+#   4) wire this framework's MCP, and make sure the relay listener is up.
+# A forged / tampered / expired link is REFUSED and you are NOT connected. The
+# private key is never touched by hand.
+set -euo pipefail
+NAME="${NAME:-<name>}"
+# Install path (durable-friendly): set MURETAI_HOME (or AGENTNET_DIR) to a persistent
+# location — e.g. MURETAI_HOME=/data/muretai on a container that wipes $HOME on reboot —
+# so keys/ + data/ (the identity/DID) survive. Idempotent: an existing key is reused.
+BUNDLE="${MURETAI_HOME:-${AGENTNET_DIR:-}}"
+if [ -z "$BUNDLE" ] && [ -n "${DSH_HOME:-}" ]; then BUNDLE="${DSH_HOME%/}/muretai-node"; fi
+BUNDLE="${BUNDLE:-<bundle>}"
+export MURETAI_CONSENT_DIR="${MURETAI_CONSENT_DIR:-$BUNDLE/.muretai}"
+export MURETAI_LOCK_DIR="${MURETAI_LOCK_DIR:-$BUNDLE/.muretai/locks}"
+_dsh_pack="$(cd "$(dirname "$0")" && pwd)"; if [ -f "$_dsh_pack/wake_dsh.sh" ] && [ ! -e "$BUNDLE/data/agents/$NAME/wake_dsh.sh" ]; then mkdir -p "$BUNDLE/data/agents/$NAME" && cp "$_dsh_pack/wake_dsh.sh" "$BUNDLE/data/agents/$NAME/wake_dsh.sh" && chmod +x "$BUNDLE/data/agents/$NAME/wake_dsh.sh"; fi
+LINK="${1:-}"
+[ -n "$LINK" ] || { echo 'usage: ./onboard_join "<invite-link>"'; exit 2; }
+
+# Beatless: make this node REACT to inbound mail (cold-start a one-shot agent turn that reads
+# the muretai inbox and replies) instead of just logging it. start_client.sh reads this env and
+# adds --beatless-cmd. An already-set value wins; unset MURETAI_BEATLESS_CMD to disable.
+if [ -z "${MURETAI_BEATLESS_CMD:-}" ]; then
+  MURETAI_BEATLESS_CMD='{folder}/wake_dsh.sh'
+fi
+export MURETAI_BEATLESS_CMD
+
+# 1) The relay rides inside the invite (relay-aware card). Read it with the system
+#    python's stdlib only (no repo needed yet); accepts the https #fragment form
+#    (https://muretai.com/invitation#d=…) and the agent://invite?d=… form alike.
+RELAY="$(python3 - "$LINK" <<'PY'
+import sys, base64, json
+from urllib.parse import urlsplit
+link = sys.argv[1].strip()
+if "d=" in link:                       # inline card form (https #fragment / agent://invite?d=)
+    tok = link.split("d=", 1)[1].strip()
+    tok += "=" * (-len(tok) % 4)
+    try:
+        print(json.loads(base64.urlsafe_b64decode(tok.encode())).get("relay", "")); sys.exit()
+    except Exception:
+        pass
+# Short-link form (https://<relay>/i/<code>): the host that served the link IS the
+# relay, so derive it from the URL — without this the primary link form yielded an
+# empty RELAY and the listener never started (a pre-open-source bug hunt finding).
+u = urlsplit(link)
+print(f"{u.scheme}://{u.netloc}" if u.scheme in ("http", "https") and u.netloc else "")
+PY
+)"
+
+# 2) Install the muretai node if absent (relay from the link). Common path: the
+#    muretai plugin already installed it, so this is skipped.
+if [ ! -f "$BUNDLE/connector_cli.py" ]; then
+  echo "Installing the muretai node to $BUNDLE ..."
+  # Download first, THEN run. Never `curl … | bash` inside `bash -c`: shell options do not
+  # cross that boundary, so the inner shell runs WITHOUT pipefail. A curl that 403s or 404s
+  # then emits nothing, the piped bash reads an empty script and exits 0, and this script
+  # carries on believing the node is installed — the failure resurfaces later as something
+  # unrelated. `curl -o` is a simple command, so the `set -e` above actually catches it.
+  # Correctness, not security: the artifact verifies itself either way.
+  _mrt_tmp="$(mktemp -d)"
+  trap 'rm -rf "${_mrt_tmp:-}"' EXIT
+  curl -fsSL https://muretai.com/install -o "$_mrt_tmp/install.sh"
+  RELAY="$RELAY" NAME="$NAME" AGENTNET_DIR="$BUNDLE" bash "$_mrt_tmp/install.sh"
+fi
+PYBIN="$BUNDLE/.venv/bin/python"; [ -x "$PYBIN" ] || PYBIN="python3"
+
+# 3) One-shot join: verify + mutual trust + auto-greeting + MCP wiring.
+cd "$BUNDLE"
+NAME="$NAME" "$PYBIN" connector_cli.py --framework dsh --as "$NAME" join --invite "$LINK"
+
+# 4) Ensure the relay listener is up so the inviter's reply lands in read_inbox.
+#    start_client.sh execs `agent/main.py … --relay-only`, so match THAT (a
+#    `pgrep start_client.sh` guard never matches → duplicate listeners that fence
+#    each other on the relay and stall inbound mail).
+if ! pgrep -f "main.py --as $NAME .*--relay-only" >/dev/null 2>&1; then
+  RELAY="$RELAY" NAME="$NAME" nohup bash "$BUNDLE/start_client.sh" \
+    >/tmp/muretai-listener.log 2>&1 &
+fi
+echo "OK: joined and greeted. The inviter's reply will appear via read_inbox."
