@@ -22,7 +22,11 @@ LINK="${1:-}"
 
 # Beatless: make this node REACT to inbound mail (cold-start a one-shot agent turn that reads
 # the muretai inbox and replies) instead of just logging it. start_client.sh reads this env and
-# adds --beatless-cmd. An already-set value wins; unset MURETAI_BEATLESS_CMD to disable.
+# adds --beatless-cmd. An already-set value wins. Unsetting it does NOT disable the wake —
+# an empty value re-selects this default (and start_client.sh auto-detects the host's wake
+# when the value is empty). To run without a wake, set an inert command before install:
+#   MURETAI_BEATLESS_CMD=true
+# (a proper off switch is ISSUE(beatless-no-off-switch) in the core backlog).
 if [ -z "${MURETAI_BEATLESS_CMD:-}" ]; then
   MURETAI_BEATLESS_CMD='{folder}/wake_dsh.sh'
 fi
@@ -63,7 +67,10 @@ if [ ! -f "$BUNDLE/connector_cli.py" ]; then
   _mrt_tmp="$(mktemp -d)"
   trap 'rm -rf "${_mrt_tmp:-}"' EXIT
   curl -fsSL https://muretai.com/install -o "$_mrt_tmp/install.sh"
-  RELAY="$RELAY" NAME="$NAME" AGENTNET_DIR="$BUNDLE" bash "$_mrt_tmp/install.sh"
+  # NOSTART=1: install only. This script starts its own relay-only listener below, and
+  # without it the installer starts one too (or, from a terminal, execs the blocking
+  # full node / installs the platform service) — two listeners on one key, or a hang.
+  RELAY="$RELAY" NAME="$NAME" AGENTNET_DIR="$BUNDLE" NOSTART=1 bash "$_mrt_tmp/install.sh"
 fi
 PYBIN="$BUNDLE/.venv/bin/python"; [ -x "$PYBIN" ] || PYBIN="python3"
 
@@ -72,7 +79,7 @@ cd "$BUNDLE"
 NAME="$NAME" "$PYBIN" connector_cli.py --framework dsh --as "$NAME" join --invite "$LINK"
 
 # 4) Ensure the relay listener is up so the inviter's reply lands in read_inbox.
-#    start_client.sh execs `agent/main.py … --relay-only`, so match THAT (a
+#    start_client.sh RUNS `agent/main.py … --relay-only` (as a child, in its supervisor loop — not `exec`), so match THAT (a
 #    `pgrep start_client.sh` guard never matches → duplicate listeners that fence
 #    each other on the relay and stall inbound mail).
 if ! pgrep -f "main.py --as $NAME .*--relay-only" >/dev/null 2>&1; then

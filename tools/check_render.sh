@@ -18,7 +18,7 @@ OUT="$(mktemp -d /tmp/dsh-render-check.XXXXXX)"
 trap 'rm -rf "$OUT"' EXIT
 
 (cd "$CORE" && python3 connector_cli.py --framework dsh \
-  --relay https://muretai.com package --out "$OUT" >/dev/null)
+  package --out "$OUT" >/dev/null)
 
 # Every rendered artifact must match this repo byte-for-byte. README/LICENSE/
 # tools/ are repo-local (not rendered) and deliberately absent from this list.
@@ -47,7 +47,7 @@ while IFS= read -r -d '' rendered; do
 done < <(find "$OUT" -type f -print0)
 
 if [ "$stale" -ne 0 ]; then
-  echo "stale: re-render with: (cd core && python3 connector_cli.py --framework dsh --relay https://muretai.com package) and copy over this repo." >&2
+  echo "stale: re-render with: (cd core && python3 connector_cli.py --framework dsh package) and copy over this repo." >&2
   exit 1
 fi
 echo "OK: repo bytes == core render (9 artifacts)"

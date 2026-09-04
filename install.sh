@@ -5,7 +5,7 @@
 #   verb), 3) place the muretai skill in $DSH_HOME/skills/, 4) start the relay listener
 #   with the inbound-mail wake armed (a one-shot `dsh --profile headless` session).
 set -euo pipefail
-RELAY="${RELAY:-https://muretai.com}"
+RELAY="${RELAY:-https://muretai.net}"
 NAME="${NAME:-$(whoami)-agent}"
 DSH_HOME="${DSH_HOME:-$HOME/.dsh}"
 # Install path (durable-friendly). Set MURETAI_HOME (or AGENTNET_DIR) to a PERSISTENT
@@ -18,7 +18,11 @@ SKILL_ROOT="$(cd "$(dirname "$0")" && pwd)"
 
 # Beatless: make this node REACT to inbound mail (cold-start a one-shot agent turn that reads
 # the muretai inbox and replies) instead of just logging it. start_client.sh reads this env and
-# adds --beatless-cmd. An already-set value wins; unset MURETAI_BEATLESS_CMD to disable.
+# adds --beatless-cmd. An already-set value wins. Unsetting it does NOT disable the wake —
+# an empty value re-selects this default (and start_client.sh auto-detects the host's wake
+# when the value is empty). To run without a wake, set an inert command before install:
+#   MURETAI_BEATLESS_CMD=true
+# (a proper off switch is ISSUE(beatless-no-off-switch) in the core backlog).
 if [ -z "${MURETAI_BEATLESS_CMD:-}" ]; then
   MURETAI_BEATLESS_CMD='{folder}/wake_dsh.sh'
 fi
@@ -39,7 +43,10 @@ if [ ! -f "$BUNDLE/start_client.sh" ]; then
   _mrt_tmp="$(mktemp -d)"
   trap 'rm -rf "${_mrt_tmp:-}"' EXIT
   curl -fsSL https://muretai.com/install -o "$_mrt_tmp/install.sh"
-  RELAY="$RELAY" NAME="$NAME" AGENTNET_DIR="$BUNDLE" bash "$_mrt_tmp/install.sh"
+  # NOSTART=1: install only. This script starts its own relay-only listener below, and
+  # without it the installer starts one too (or, from a terminal, execs the blocking
+  # full node / installs the platform service) — two listeners on one key, or a hang.
+  RELAY="$RELAY" NAME="$NAME" AGENTNET_DIR="$BUNDLE" NOSTART=1 bash "$_mrt_tmp/install.sh"
 fi
 PYBIN="$BUNDLE/.venv/bin/python"; [ -x "$PYBIN" ] || PYBIN="python3"
 
@@ -94,7 +101,7 @@ mkdir -p "$DSH_HOME/skills/muretai"
 cp -R "$SKILL_ROOT/skills/muretai/." "$DSH_HOME/skills/muretai/"
 
 # 5) Start the relay-only listener (logs inbound mail for read_inbox) — only if one
-#    isn't already up for this node. start_client.sh execs `agent/main.py … --relay-only`,
+#    isn't already up for this node. start_client.sh RUNS `agent/main.py … --relay-only` (as a child, in its supervisor loop — not `exec`),
 #    so match THAT process — on the NAME *and* the relay. A listener for this name bound
 #    to a DIFFERENT relay does not make this install reachable: its mail lands somewhere
 #    else, and counting it as "up" reports success for a node that never receives
@@ -102,7 +109,7 @@ cp -R "$SKILL_ROOT/skills/muretai/." "$DSH_HOME/skills/muretai/"
 LISTENER_PID=""
 OTHER_RELAY=""
 for _p in $(pgrep -f "main.py --as $NAME .*--relay-only" 2>/dev/null); do
-  _a=$(ps -ww -o args= -p "$_p" 2>/dev/null)
+  _a=$(ps -ww -o args= -p "$_p" 2>/dev/null) || continue   # gone since pgrep: not an error
   case "$_a" in
     *"--relay $RELAY "*) LISTENER_PID="$_p"; break ;;
     *"--relay "*) OTHER_RELAY="${_a#*--relay }"; OTHER_RELAY="${OTHER_RELAY%% *}" ;;
