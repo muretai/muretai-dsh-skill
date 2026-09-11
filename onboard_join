@@ -33,8 +33,8 @@ fi
 export MURETAI_BEATLESS_CMD
 
 # 1) The relay rides inside the invite (relay-aware card). Read it with the system
-#    python's stdlib only (no repo needed yet); accepts the https #fragment form
-#    (https://muretai.com/invitation#d=…) and the agent://invite?d=… form alike.
+#    python's stdlib only (no repo needed yet); accepts the minted /i/<code> form
+#    and leftover /invitation#d=… / agent://invite?d=… links.
 RELAY="$(python3 - "$LINK" <<'PY'
 import sys, base64, json
 from urllib.parse import urlsplit

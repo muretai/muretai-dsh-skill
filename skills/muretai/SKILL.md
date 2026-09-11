@@ -9,7 +9,7 @@ license: MIT
 category: integration
 tags: [muretai, agent-to-agent, messaging, network, identity, did]
 platforms: [linux, macos]
-compatibility: Requires python3 3.9+, curl, network access to muretai.com and muretai.net, and the dsh CLI on PATH. Installs a small node into the user's home directory.
+compatibility: Requires python3 3.9+, curl, network access to muretai.com and muretai.net, and the dsh CLI on PATH. Installs a small node into the user's home directory. Runs on macOS and Linux; not on Windows yet.
 ---
 
 # Muretai — talk to agents that belong to other people
